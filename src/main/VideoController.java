@@ -15,6 +15,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Slider;
+import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
@@ -36,7 +37,12 @@ public class VideoController {
 	private CheckBox flipVert;
 	@FXML
 	private CheckBox negative;
+	@FXML
+	private CheckBox resizing;	
 
+	@FXML
+	private TextField camStatusTextField;
+	
 	@FXML
 	private Slider rotation;
 	@FXML
@@ -54,6 +60,10 @@ public class VideoController {
 	private boolean isCameraActive = false;
 	private static int cameraId = 0;
 
+	String cameraErrorMessage = "Camera status: Not connected or unreachable. Please try again with a camera connected or set up.";
+	String cameraOkMessage = "Camera status: Connected.";
+	
+	
 	public void initialize() {
 		this.capture = new VideoCapture();
 		this.isCameraActive = false;
@@ -67,10 +77,14 @@ public class VideoController {
 
 		if (!this.isCameraActive) {
 			// start capturing video
+			
 			this.capture.open(cameraId);
 
 			// test for opening success
 			if (this.capture.isOpened()) {
+				System.out.println(cameraOkMessage);
+				camStatusTextField.setText(cameraOkMessage);
+				
 				this.isCameraActive = true;
 
 				// 30 FPS
@@ -93,7 +107,8 @@ public class VideoController {
 				this.button.setText("Stop Camera");
 			} else {
 				// log the error
-				System.err.println("Camera connection unavailable.");
+				System.err.println(cameraErrorMessage);
+				camStatusTextField.setText(cameraErrorMessage);
 			}
 		} else {
 			// the camera is not active at this point
@@ -106,14 +121,14 @@ public class VideoController {
 		}
 	}
 
-	private byte saturate(double val) {
-		int iVal = (int) Math.round(val);
-		iVal = iVal > 255 ? 255 : (iVal < 0 ? 0 : iVal);
-		return (byte) iVal;
-	}
+//	private byte saturate(double value) {
+//		int intValue = (int) Math.round(value);
+//		intValue = (intValue > 255) ? 255 : (intValue < 0 ? 0 : intValue);
+//		return (byte) intValue;
+//	}
 
 	private Mat grabFrame() {
-		// init everything
+
 		Mat frame = new Mat();
 		double bias = 0;
 		double gain = 1;
@@ -156,6 +171,14 @@ public class VideoController {
 						Core.flip(frame, frame, 0);
 					}
 
+					// apply resizing
+					if (resizing.isSelected()) {
+						int rows = frame.cols() / 2;
+						int cols = frame.rows() / 2;
+						Size newSize = new Size(rows,cols);
+						Imgproc.resize( frame, frame, newSize );
+					}
+					
 					// apply negative
 					if (negative.isSelected()) {
 						Core.bitwise_not(frame, frame);
@@ -168,23 +191,25 @@ public class VideoController {
 					bias = brightness.getValue();
 					gain = contrast.getValue();
 					if (bias != 0 || gain != 1) {
-						Mat newFrame = Mat.zeros(frame.size(), frame.type());
-
-						byte[] frameData = new byte[(int) (frame.total() * frame.channels())];
-						frame.get(0, 0, frameData);
-						byte[] newFrameData = new byte[(int) (newFrame.total() * newFrame.channels())];
-						for (int y = 0; y < frame.rows(); y++) {
-							for (int x = 0; x < frame.cols(); x++) {
-								for (int c = 0; c < frame.channels(); c++) {
-									double pixelValue = frameData[(y * frame.cols() + x) * frame.channels() + c];
-									pixelValue = pixelValue < 0 ? pixelValue + 256 : pixelValue;
-									newFrameData[(y * frame.cols() + x) * frame.channels() + c] = saturate(
-											gain * pixelValue + bias);
-								}
-							}
-						}
-						newFrame.put(0, 0, newFrameData);
-						frame.put(0, 0, newFrameData);
+						frame.convertTo(frame, -1, gain, bias);
+						
+//						Mat newFrame = Mat.zeros(frame.size(), frame.type());
+//						
+//						byte[] frameData = new byte[(int) (frame.total() * frame.channels())];
+//						frame.get(0, 0, frameData);
+//						byte[] newFrameData = new byte[(int) (newFrame.total() * newFrame.channels())];
+//						for (int y = 0; y < frame.rows(); y++) {
+//							for (int x = 0; x < frame.cols(); x++) {
+//								for (int c = 0; c < frame.channels(); c++) {
+//									double pixelValue = frameData[(y * frame.cols() + x) * frame.channels() + c];
+//									pixelValue = pixelValue < 0 ? pixelValue + 256 : pixelValue;
+//									newFrameData[(y * frame.cols() + x) * frame.channels() + c] = saturate(
+//											gain * pixelValue + bias);
+//								}
+//							}
+//						}
+//						newFrame.put(0, 0, newFrameData);
+//						frame.put(0, 0, newFrameData);
 					}
 				}
 
@@ -235,9 +260,7 @@ public class VideoController {
 		ImageHandler.onFXThread(view.imageProperty(), image);
 	}
 
-	/**
-	 * On main close, stop the acquisition from the camera
-	 */
+	// Stop the acquisition from the camera when main is closed
 	protected void setClosed() {
 		this.stopAcquisition();
 	}

@@ -15,7 +15,7 @@ public class VideoApp extends Application {
 	@Override
 	public void start(Stage primaryStage) {
 		try {
-			// load FXML, store the root element
+			// load FXML from fxml file
 			FXMLLoader loader = new FXMLLoader(getClass().getResource("/main/VideoFX.fxml"));
 			// store the root element for controller usage
 			BorderPane root = (BorderPane) loader.load();
