@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.text.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import java.lang.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.layout.BorderPane?>
+
+<BorderPane prefHeight="327.0" prefWidth="475.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="main.VideoController">
+	<center>
+		<ImageView fx:id="currentFrame" fitHeight="212.0" fitWidth="349.0" pickOnBounds="true" preserveRatio="true" BorderPane.alignment="CENTER" />
+	</center>
+	<bottom>
+		<Button fx:id="button" mnemonicParsing="false" onAction="#startCamera" text="Start Camera" BorderPane.alignment="BOTTOM_CENTER">
+			<BorderPane.margin>
+				<Insets bottom="5.0" />
+			</BorderPane.margin>
+		</Button>
+	</bottom>
+
+	<right>
+		<VBox prefHeight="297.0" prefWidth="160.0" BorderPane.alignment="CENTER">
+			<children>
+				<Text strokeType="OUTSIDE" strokeWidth="0.0" text="Controls">
+					<font>
+						<Font name="Arial" size="20.0" />
+					</font>
+				</Text>
+				<CheckBox fx:id="blurring" mnemonicParsing="false" text="Gaussian Blurring">
+					<font>
+						<Font size="13.0" />
+					</font>
+				</CheckBox>
+				<CheckBox fx:id="canny" mnemonicParsing="false" text="Canny">
+					<font>
+						<Font size="13.0" />
+					</font>
+				</CheckBox>
+				<CheckBox fx:id="sobel" mnemonicParsing="false" text="Sobel">
+					<font>
+						<Font size="13.0" />
+					</font>
+				</CheckBox>
+				<CheckBox fx:id="grayscale" alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" text="Grayscale">
+					<font>
+						<Font size="13.0" />
+					</font>
+				</CheckBox>
+				<CheckBox fx:id="flipHor" mnemonicParsing="false" text="Flip - Horizontal">
+					<font>
+						<Font size="13.0" />
+					</font>
+				</CheckBox>
+				<CheckBox fx:id="flipVert" mnemonicParsing="false" text="Flip - Vertical">
+					<font>
+						<Font size="13.0" />
+					</font>
+				</CheckBox>
+				<CheckBox fx:id="negative" mnemonicParsing="false" text="Negative">
+					<font>
+						<Font size="13.0" />
+					</font>
+				</CheckBox>
+            <Text strokeType="OUTSIDE" strokeWidth="0.0" text="Rotation (degrees)" />
+            <Slider fx:id="rotation" blockIncrement="90.0" majorTickUnit="90.0" max="270.0" minorTickCount="0" showTickLabels="true" showTickMarks="true" snapToTicks="true" />
+				<Text strokeType="OUTSIDE" strokeWidth="0.0" text="Brightness">
+					<font>
+						<Font size="13.0" />
+					</font>
+				</Text>
+				<Slider fx:id="brightness" blockIncrement="15.0" majorTickUnit="15.0" max="255.0" min="-255.0" minorTickCount="0" showTickLabels="true" showTickMarks="true" snapToTicks="true" />
+				<Text strokeType="OUTSIDE" strokeWidth="0.0" text="Contrast">
+					<font>
+						<Font size="13.0" />
+					</font>
+				</Text>
+				<Slider fx:id="contrast" blockIncrement="0.1" majorTickUnit="1.0" max="5.0" minorTickCount="1" showTickLabels="true" showTickMarks="true" value="1.0" />
+			</children>
+		</VBox>
+	</right>
+</BorderPane>
