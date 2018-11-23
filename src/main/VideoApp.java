@@ -21,7 +21,7 @@ public class VideoApp extends Application {
 			BorderPane root = (BorderPane) loader.load();
 
 			// create and style scene
-			Scene scene = new Scene(root, 1000, 600);
+			Scene scene = new Scene(root, 800, 1000);
 			scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
 			
 			primaryStage.setTitle("VideoApp");

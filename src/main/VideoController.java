@@ -5,6 +5,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.opencv.core.Core;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
@@ -21,8 +22,11 @@ import javafx.scene.image.ImageView;
 
 public class VideoController {
 	@FXML
-	private Button button;
-
+	private Button btnCamera;
+	@FXML
+	private Button btnReset;
+	
+	
 	@FXML
 	private CheckBox blurring;
 	@FXML
@@ -38,17 +42,25 @@ public class VideoController {
 	@FXML
 	private CheckBox negative;
 	@FXML
-	private CheckBox resizing;	
+	private CheckBox resizing;
 
 	@FXML
 	private TextField camStatusTextField;
-	
+
 	@FXML
 	private Slider rotation;
 	@FXML
 	private Slider brightness;
 	@FXML
 	private Slider contrast;
+	@FXML
+	private Slider cannyThreshold;
+	@FXML
+	private Slider gaussIntensity;
+	@FXML
+	private Slider heightResize;
+	@FXML
+	private Slider widthResize;
 
 	@FXML
 	private ImageView currentFrame;
@@ -62,8 +74,7 @@ public class VideoController {
 
 	String cameraErrorMessage = "Camera status: Not connected or unreachable. Please try again with a camera connected or set up.";
 	String cameraOkMessage = "Camera status: Connected.";
-	
-	
+
 	public void initialize() {
 		this.capture = new VideoCapture();
 		this.isCameraActive = false;
@@ -77,14 +88,14 @@ public class VideoController {
 
 		if (!this.isCameraActive) {
 			// start capturing video
-			
+
 			this.capture.open(cameraId);
 
 			// test for opening success
 			if (this.capture.isOpened()) {
 				System.out.println(cameraOkMessage);
 				camStatusTextField.setText(cameraOkMessage);
-				
+
 				this.isCameraActive = true;
 
 				// 30 FPS
@@ -103,8 +114,8 @@ public class VideoController {
 				this.timer = Executors.newSingleThreadScheduledExecutor();
 				this.timer.scheduleAtFixedRate(frameGrabber, 0, 33, TimeUnit.MILLISECONDS);
 
-				// update the button content
-				this.button.setText("Stop Camera");
+				// update the camera content
+				this.btnCamera.setText("Stop Camera");
 			} else {
 				// log the error
 				System.err.println(cameraErrorMessage);
@@ -113,19 +124,38 @@ public class VideoController {
 		} else {
 			// the camera is not active at this point
 			this.isCameraActive = false;
-			// update again the button content
-			this.button.setText("Start Camera");
+			// update again the camera content
+			this.btnCamera.setText("Start Camera");
 
 			// stop the timer
 			this.stopAcquisition();
 		}
 	}
 
-//	private byte saturate(double value) {
-//		int intValue = (int) Math.round(value);
-//		intValue = (intValue > 255) ? 255 : (intValue < 0 ? 0 : intValue);
-//		return (byte) intValue;
-//	}
+	@FXML
+	protected void resetControls(ActionEvent event) {
+		
+		// uncheck all checkboxes
+		blurring.setSelected(false);
+		canny.setSelected(false);
+		sobel.setSelected(false);
+		grayscale.setSelected(false);
+		flipHor.setSelected(false);
+		flipVert.setSelected(false);
+		negative.setSelected(false);
+		resizing.setSelected(false);
+		
+		// reset all sliders to default value
+		rotation.setValue(0);
+		brightness.setValue(0);
+		contrast.setValue(1);
+		cannyThreshold.setValue(0);
+		gaussIntensity.setValue(0);
+		heightResize.setValue(1);
+		widthResize.setValue(1);
+		rotation.setValue(0);
+		
+	}
 
 	private Mat grabFrame() {
 
@@ -141,50 +171,119 @@ public class VideoController {
 
 				// if the frame is not empty, process it
 				if (!frame.empty()) {
+
 					// apply gaussian convolution
 					if (blurring.isSelected()) {
-						Imgproc.GaussianBlur(frame, frame, new Size(3, 3), 3);
+						gaussIntensity.setDisable(false);
+						double maxBlur = gaussIntensity.getValue();
+						for (int i = 0; i < maxBlur; i++) {
+							Imgproc.GaussianBlur(frame, frame, new Size(3, 3), 3);
+						}
+
+					} else {
+						if (gaussIntensity.isDisable() == false) {
+							gaussIntensity.setDisable(true);
+						}
 					}
 
+					// apply grayscale filter - WORKING
+					if (grayscale.isSelected()) {
+						Imgproc.cvtColor(frame, frame, Imgproc.COLOR_BGR2GRAY);
+					}
+					
 					// apply canny convolution
 					if (canny.isSelected()) {
-						Imgproc.Canny(frame, frame, 3, 3);
+
+						cannyThreshold.setDisable(false);
+
+						// convert to grayscale
+						if (!grayscale.isSelected()) {
+							Imgproc.cvtColor(frame, frame, Imgproc.COLOR_BGR2GRAY);
+						}
+
+						// reduce noise with a 3x3 kernel
+						Imgproc.blur(frame, frame, new Size(3, 3));
+
+						// canny detector, with ratio of lower:upper threshold of 3:1
+						Imgproc.Canny(frame, frame, cannyThreshold.getValue(), cannyThreshold.getValue() * 3);
+
+					} else if (cannyThreshold.isDisable() == false) {
+						cannyThreshold.setDisable(true);
 					}
 
 					// apply sobel convolution
 					if (sobel.isSelected()) {
-						Imgproc.Sobel(frame, frame, 0, 0, 0);
+						
+						int ddepth = CvType.CV_16S;
+					    Mat grayImage = new Mat();
+					    Mat gradientX = new Mat();
+					    Mat gradientY = new Mat();
+					    Mat absGradientX = new Mat();
+					    Mat absGradientY = new Mat();
+
+					    // reduce noise with a 3x3 kernel
+					    Imgproc.GaussianBlur(frame, frame, new Size(3, 3), 0, 0, Core.BORDER_DEFAULT);
+
+					    // convert to grayscale if not already converted
+						if (!grayscale.isSelected() && !canny.isSelected()) {
+							Imgproc.cvtColor(frame, grayImage, Imgproc.COLOR_BGR2GRAY);
+							
+							// Gradient X
+						    Imgproc.Sobel(grayImage, gradientX, ddepth, 1, 0);
+						    Core.convertScaleAbs(gradientX, absGradientX);
+
+						    // Gradient Y
+						    Imgproc.Sobel(grayImage, gradientY, ddepth, 0, 1);
+						    Core.convertScaleAbs(gradientY, absGradientY);
+						} else {
+							// Gradient X
+						    Imgproc.Sobel(frame, gradientX, ddepth, 1, 0);
+						    Core.convertScaleAbs(gradientX, absGradientX);
+
+						    // Gradient Y
+						    Imgproc.Sobel(frame, gradientY, ddepth, 0, 1);
+						    Core.convertScaleAbs(gradientY, absGradientY);
+						}//
+						
+					    // Total Gradient (approximate)
+						Core.addWeighted(absGradientX, 0.5, absGradientY, 0.5, 0, frame);
 					}
 
-					// apply grayscale filter
-					if (grayscale.isSelected()) {
-						Imgproc.cvtColor(frame, frame, Imgproc.COLOR_BGR2GRAY);
-					}
-
-					// apply horizontal mirroring
+					// apply horizontal mirroring - WORKING
 					if (flipHor.isSelected()) {
 						Core.flip(frame, frame, 1);
 					}
 
-					// apply vertical mirroring
+					// apply vertical mirroring - WORKING
 					if (flipVert.isSelected()) {
 						Core.flip(frame, frame, 0);
 					}
 
 					// apply resizing
 					if (resizing.isSelected()) {
-						int rows = frame.cols() / 2;
-						int cols = frame.rows() / 2;
-						Size newSize = new Size(rows,cols);
-						Imgproc.resize( frame, frame, newSize );
+						// allow use of resizing sliders
+						heightResize.setDisable(false);
+						widthResize.setDisable(false);
+						
+						int frameWidth = frame.cols();
+						int frameHeight = frame.rows();						
+						
+						int newFrameWidth = (int) (widthResize.getValue() * frameWidth);
+						int newFrameHeight = (int) (heightResize.getValue() * frameHeight);						
+						
+						// resize image according to slider values
+						Imgproc.resize(frame, frame, new Size(newFrameWidth, newFrameHeight), 0, 0, Imgproc.INTER_CUBIC);
+					} else if (!heightResize.isDisable() && !widthResize.isDisable() ) {
+						heightResize.setDisable(true);
+						widthResize.setDisable(true);
 					}
-					
-					// apply negative
+
+					// apply negative - WORKING
 					if (negative.isSelected()) {
 						Core.bitwise_not(frame, frame);
 					}
 
-					// apply rotation
+					// apply rotation - WORKING
 					rotateFrame(frame);
 
 					// apply brightness and contrast
@@ -192,7 +291,7 @@ public class VideoController {
 					gain = contrast.getValue();
 					if (bias != 0 || gain != 1) {
 						frame.convertTo(frame, -1, gain, bias);
-						
+
 //						Mat newFrame = Mat.zeros(frame.size(), frame.type());
 //						
 //						byte[] frameData = new byte[(int) (frame.total() * frame.channels())];
@@ -212,13 +311,14 @@ public class VideoController {
 //						frame.put(0, 0, newFrameData);
 					}
 				}
+			}
 
-			} catch (Exception e) {
+			catch (Exception e) {
 				// log the error
 				System.err.println("Exception during image elaboration: " + e);
 			}
-		}
 
+		}
 		return frame;
 	}
 
